@@ -202,7 +202,7 @@ def sendkeys(strs):
 
 if __name__ == "__main__":
 
-	keybuff = "te^dst Test{TAB}test";
+	keybuff = "te^dst  Test{TAB}test";
 	keybuff = "teIIIte";
 
 	print (keybuff)
