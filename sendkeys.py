@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import Xlib.display
-import Xlib.X
-import Xlib.XK
-import Xlib.protocol.event
-import Xlib.ext.xtest
-
-import sys
+import os
+if os.name == 'nt':
+	# Windows
+	raise Exception("sendkyes is not implimented")
+elif os.name == 'posix':
+	# Linux
+	import Xlib.display
+	import Xlib.X
+	import Xlib.XK
+	import Xlib.protocol.event
+	import Xlib.ext.xtest
 
 display = Xlib.display.Display()
 
@@ -107,13 +111,11 @@ special_X_keysyms = {
 def get_keysym(ch) :
 	keysym = Xlib.XK.string_to_keysym(ch)
 	if keysym == 0 :
-		sys.stdout.flush()
 
 		# Unfortunately, although this works to get the correct keysym
 		# i.e. keysym for '#' is returned as "numbersign"
 		# the subsequent display.keysym_to_keycode("numbersign") is 0.
 		keysym = Xlib.XK.string_to_keysym(special_X_keysyms[ch])
-		sys.stdout.flush()
 
 	return keysym
 
@@ -158,7 +160,7 @@ def pushkey(keycode,shift,ctrl,alt):
 	except KeyboardInterrupt:
 		pass
 
-def sendkeys(strings):
+def sendkeysLinux(strings):
 
 	groupFlag=False
 	groupString = ""
@@ -224,11 +226,22 @@ def sendkeys(strings):
 		isNeedShift = False
 		groupString = ""
 		
+def sendkeys(strings):
+
+	if os.name == 'nt':
+		#windows
+		raise Exception("sendkyes is not implimented")
+	elif os.name == 'posix':
+		#linux
+		sendkeysLinux(strings)
+		
+
+
 if __name__ == "__main__":
 
-	#keybuff = "te^dst  Test{TAB}te{ENTER}st{BS}tests-{~}-{{}-{}}-{+}-{%}-{^}";
 	keybuff = "dir~+dir-{+}{{}{}}{^}{%}{~}{(}{)} {BS}TAB -={+};*:!\"#$%&'()=|"
 
 	print (keybuff)
+
 	sendkeys(keybuff)
 
