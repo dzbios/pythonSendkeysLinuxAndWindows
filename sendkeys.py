@@ -4,7 +4,8 @@
 import os
 if os.name == 'nt':
 	# Windows
-	raise Exception("sendkyes is not implimented")
+	import win32com.client
+	shell = win32com.client.Dispatch("WScript.Shell")
 elif os.name == 'posix':
 	# Linux
 	import Xlib.display
@@ -13,13 +14,13 @@ elif os.name == 'posix':
 	import Xlib.protocol.event
 	import Xlib.ext.xtest
 
-display = Xlib.display.Display()
+	display = Xlib.display.Display()
 
-ctrlkey=display.keysym_to_keycode(Xlib.XK.XK_Control_L)
-altkey=display.keysym_to_keycode(Xlib.XK.XK_Alt_L)
-shiftkey=display.keysym_to_keycode(Xlib.XK.XK_Shift_L)
+	ctrlkey=display.keysym_to_keycode(Xlib.XK.XK_Control_L)
+	altkey=display.keysym_to_keycode(Xlib.XK.XK_Alt_L)
+	shiftkey=display.keysym_to_keycode(Xlib.XK.XK_Shift_L)
 
-specialKeys = (
+	specialKeys = (
 	("BACKSPACE",Xlib.XK.XK_BackSpace),
 	("BS",Xlib.XK.XK_BackSpace),
 	("BKSP",Xlib.XK.XK_BackSpace),
@@ -230,7 +231,7 @@ def sendkeys(strings):
 
 	if os.name == 'nt':
 		#windows
-		raise Exception("sendkyes is not implimented")
+		shell.SendKeys(strings, 0)
 	elif os.name == 'posix':
 		#linux
 		sendkeysLinux(strings)
