@@ -7,6 +7,8 @@ import Xlib.XK
 import Xlib.protocol.event
 import Xlib.ext.xtest
 
+import sys
+
 display = Xlib.display.Display()
 
 ctrlkey=display.keysym_to_keycode(Xlib.XK.XK_Control_L)
@@ -23,11 +25,11 @@ specialKeys = (
 	("DEL",Xlib.XK.XK_Delete),
 	("DOWN",Xlib.XK.XK_Down),
 	("END",Xlib.XK.XK_End),
-	("ENTER ",Xlib.XK.XK_KP_Enter),
+	("ENTER",Xlib.XK.XK_KP_Enter),
 	("ESC",Xlib.XK.XK_Escape),
 	("HELP",Xlib.XK.XK_Help),
 	("HOME",Xlib.XK.XK_KP_Home),
-	("INSERT ",Xlib.XK.XK_KP_Insert),
+	("INSERT",Xlib.XK.XK_KP_Insert),
 	("INS",Xlib.XK.XK_KP_Insert),
 	("LEFT",Xlib.XK.XK_Left),
 	("NUMLOCK",Xlib.XK.XK_Num_Lock),
@@ -105,10 +107,14 @@ special_X_keysyms = {
 def get_keysym(ch) :
 	keysym = Xlib.XK.string_to_keysym(ch)
 	if keysym == 0 :
+		sys.stdout.flush()
+
 		# Unfortunately, although this works to get the correct keysym
 		# i.e. keysym for '#' is returned as "numbersign"
 		# the subsequent display.keysym_to_keycode("numbersign") is 0.
 		keysym = Xlib.XK.string_to_keysym(special_X_keysyms[ch])
+		sys.stdout.flush()
+
 	return keysym
 
 def char_to_keycode(ch) :
@@ -120,92 +126,109 @@ def char_to_keycode(ch) :
 	else :
 		return keycode , False
 
-def sendkeys(strs):
+def pushkey(keycode,shift,ctrl,alt):
 
-	stackShift = False
-	stackCtrl  = False
-	stackAlt   = False
-	hitKey     = False
-	startStock  = False
-	stockString= ""
+	# Press Shift Alt Ctrl key
+	if ctrl :
+		Xlib.ext.xtest.fake_input(display, Xlib.X.KeyPress, ctrlkey)
 
-	for strch in list(strs):
+	if shift :
+		Xlib.ext.xtest.fake_input(display, Xlib.X.KeyPress, shiftkey)
 
-		if strch == '+':
-			stackShift = True
-		elif strch == '^':
-			stackCtrl = True
-		elif strch == '%':
-			stackAlt = True
-		elif strch == '{':
-			# Strat special key
-			stockString= ""
-			startStock = True
-		elif startStock and strch != '}' :
-			# Special key
-			stockString += strch
+	if alt :
+		Xlib.ext.xtest.fake_input(display, Xlib.X.KeyPress, altkey)
+
+	# Release Shift Alt Ctrl key
+	Xlib.ext.xtest.fake_input(display, Xlib.X.KeyPress, keycode)
+	Xlib.ext.xtest.fake_input(display, Xlib.X.KeyRelease, keycode)
+
+	# Release special key
+	if alt :
+		Xlib.ext.xtest.fake_input(display, Xlib.X.KeyRelease, altkey)
+
+	if shift :
+		Xlib.ext.xtest.fake_input(display, Xlib.X.KeyRelease, shiftkey)
+
+	if ctrl :
+		Xlib.ext.xtest.fake_input(display, Xlib.X.KeyRelease, ctrlkey)
+
+	# sync
+	try:
+		display.sync()
+	except KeyboardInterrupt:
+		pass
+
+def sendkeys(strings):
+
+	groupFlag=False
+	groupString = ""
+
+	shift = ctrl = alt = False
+
+	for ch in list(strings):
+
+		if ch == '{':
+			if not groupFlag :
+				groupString = ""
+				groupFlag = True 
+				continue
+		elif ch == '}':
+			if groupString != "" :
+				groupFlag = False
+				ch = ''
+
+		if groupFlag :
+			groupString += ch
+			continue
+				
+		if ch == '+':
+			shift = True
+			continue
+		elif ch == '^':
+			ctrl = True
+			continue
+		elif ch == '%':
+			alt = True
+			continue
+				
+		# ----- keycode Scan
+		if groupString != "" and len(groupString)!=1:
+			# Group Mode
+
+			keycode = getSpecialkeycode(groupString)
+			isNeedShift = False
+			groupString = ""
+
 		else :
-
-			if startStock and strch == '}' :
-				# End special key
-				keycode = getSpecialkeycode(stockString)
+			if groupString!="":
+				chs = list(groupString)
+				ch = chs[0]
+				keycode,isNeedShift = char_to_keycode(ch)
+			elif ch=='~':
+				keycode = getSpecialkeycode("ENTER")
 				isNeedShift = False
-			else :
+			else:
+				keycode,isNeedShift = char_to_keycode(ch)
 
-				# Normal key
-				# if indicate key need shift key , isNeedShift is True
-				# eg. C:(Shift+c) #:(Shift+3)
-				keycode,isNeedShift = char_to_keycode(strch)
+		if isNeedShift:
+			shift = True
+			ctrl  = False
+			alt   = False
 
-			# if indicate Alt or Ctrl
-			#  release isNeedShift
-			startStock = False
-			if isNeedShift and (stackAlt or  stackCtrl) :
-				stackShift = False
+		# ----- keycode pushkey
+		pushkey(keycode,shift,ctrl,alt)
 
-			if isNeedShift :
-				stackShift = True
-	
-			# Press Shift Alt Ctrl key
-			if stackCtrl :
-				Xlib.ext.xtest.fake_input(display, Xlib.X.KeyPress, ctrlkey)
-
-			if stackAlt :
-				Xlib.ext.xtest.fake_input(display, Xlib.X.KeyPress, altkey)
-
-			if stackShift :
-				Xlib.ext.xtest.fake_input(display, Xlib.X.KeyPress, shiftkey)
+		shift = False
+		ctrl  = False
+		alt   = False
+		isNeedShift = False
+		groupString = ""
 		
-			# Release Shift Alt Ctrl key
-			Xlib.ext.xtest.fake_input(display, Xlib.X.KeyPress, keycode)
-			Xlib.ext.xtest.fake_input(display, Xlib.X.KeyRelease, keycode)
-
-			# Release special key
-			if stackShift :
-				Xlib.ext.xtest.fake_input(display, Xlib.X.KeyRelease, shiftkey)
-
-			if stackAlt :
-				Xlib.ext.xtest.fake_input(display, Xlib.X.KeyRelease, altkey)
-
-			if stackCtrl :
-				Xlib.ext.xtest.fake_input(display, Xlib.X.KeyRelease, ctrlkey)
-
-			stackShift = False
-			stackCtrl  = False
-			stackAlt   = False
-			hitKey     = False
-
-			try:
-				display.sync()
-			except KeyboardInterrupt:
-				pass
-
 if __name__ == "__main__":
 
-	keybuff = "te^dst  Test{TAB}test";
-	keybuff = "teIIIte";
+	#keybuff = "te^dst  Test{TAB}te{ENTER}st{BS}tests-{~}-{{}-{}}-{+}-{%}-{^}";
+	keybuff = "dir~+dir-{+}{{}{}}{^}{%}{~}{(}{)} {BS}TAB -={+};*:!\"#$%&'()=|"
 
 	print (keybuff)
 	sendkeys(keybuff)
-
 
