@@ -2,6 +2,7 @@ pythonLinuxSendkeys
 ===================
 
 I want to use sendkeys like windows .
+It can use Windows and Linus.
 
 # First
 
@@ -14,5 +15,12 @@ I want to use sendkeys like windows .
 
 # Sample
 
- sendkeys("Test Command")
+import sendkeys
 
+sendkeys.sendkeys("Test Command")
+
+sendkeys.sendkeys("+test +command")
+ 
+sendkeys.sendkeys("-{TAB}-")
+
+sendkeys.sendkeys("{{} {}} {~} {%} {^} {*}")
