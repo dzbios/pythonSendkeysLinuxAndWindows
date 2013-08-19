@@ -13,6 +13,12 @@ It can use Windows and Linus.
 
  http://msdn.microsoft.com/en-us/library/system.windows.forms.sendkeys.aspx
 
+# Dependency:
+
+ Linux : xlib
+
+ Windows : win32com
+
 # Sample
 
 import sendkeys
